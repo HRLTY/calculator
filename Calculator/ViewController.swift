@@ -10,15 +10,28 @@ import UIKit
 
 class ViewController: UIViewController
 {
+    var brain = CalculatorBrain()
+    var userIsTheMiddleOfTypingANumber = false
     @IBOutlet weak var history: UILabel!
     @IBOutlet weak var display: UILabel!
-    var userIsTheMiddleOfTypingANumber = false
     @IBAction func clearAll()
     {
         history.text = ""
         displayValue = 0
-        operandStack = []
+        brain = CalculatorBrain()
     }
+    @IBAction func appendCharacter(sender: UIButton) {
+        //for constant button oe variables
+        let character = sender.currentTitle!
+        if userIsTheMiddleOfTypingANumber { enter() }
+        history.text = history.text! + character + "\n"
+        if let result = brain.pushCharacter(character) {
+            displayValue = result
+        }else{
+            displayValue = 0
+        }
+    }
+    
     @IBAction func appendDigit(sender: UIButton)
     {
         let digit = sender.currentTitle!
@@ -30,65 +43,74 @@ class ViewController: UIViewController
             display.text = digit
             userIsTheMiddleOfTypingANumber = true
         }
-
+    
     }
-    var operandStack = Array<Double>()
-
-
+    
+    @IBAction func dropLastdigit(){
+        if userIsTheMiddleOfTypingANumber{
+            if display.text!.characters.count > 1 {
+                display.text = String(display.text!.characters.dropLast())
+            }else{
+                display.text = "0"
+                userIsTheMiddleOfTypingANumber = false
+            }
+        }
+    }
+    
+    @IBAction func changeSign(){
+        if userIsTheMiddleOfTypingANumber{
+            if display.text!.characters.contains("-"){
+                display.text = String(display.text!.characters.dropFirst())
+            }else{
+                display.text!.insert("-", atIndex: display.text!.startIndex)
+            }
+        }
+    }
+    
+    
     @IBAction func operate(sender: UIButton) {
-        let operation = sender.currentTitle!
+        
         if userIsTheMiddleOfTypingANumber{
             enter()
         }
-        if operation != "π"{
-            history.text = history.text! + operation + "\n"
-        }
-        switch operation {
-        case "+": performOperation { $0 + $1 }
-        case "−": performOperation { $1 - $0 }
-        case "×": performOperation { $0 * $1 }
-        case "÷": performOperation { $1 / $0 }
-        case "√": performOperation { sqrt($0)}
-        case "sin": performOperation {sin($0)}
-        case "cos": performOperation {cos($0)}
-        case "π": enter(M_PI)
-        default: break
-        }
-    }
-    
-    func performOperation(operation: (Double, Double) -> Double){
-        if operandStack.count >= 2 {
-            displayValue = operation(operandStack.removeLast(), operandStack.removeLast())
-            enter()
-        }
-    }
-    
-    private func performOperation(operation: Double -> Double){
-        if operandStack.count >= 1 {
-            displayValue = operation(operandStack.removeLast())
-            enter()
-        }
-    }
-    
-    @IBAction func enter() {
-        userIsTheMiddleOfTypingANumber = false
-        operandStack.append(displayValue)
-        history.text = history.text! + "\(displayValue)\n"
-        print("operandStack = \(operandStack)")
-    }
-    private func enter(const:Double) {
-        displayValue = const
-        enter()
-    }
-    var displayValue: Double{
-        get{
-            return NSNumberFormatter().numberFromString(display.text!)!.doubleValue
-        }
-        set{
-            display.text = "\(newValue)"
-            userIsTheMiddleOfTypingANumber = false
+        if let operation = sender.currentTitle {
+                history.text = history.text! + operation + " =\n"
+            if let result = brain.performOperation(operation){
+                displayValue = result
+            }else{
+                displayValue = nil
+            }
         }
     }
 
+    @IBAction func enter(){
+        userIsTheMiddleOfTypingANumber = false
+        //        operandStack.append(displayValue)
+                history.text = history.text! + "\(displayValue!)\n"
+        //        print("operandStack = \(operandStack)")
+        if let result = brain.pushOperand(displayValue!) {
+            displayValue = result
+        }else{
+            displayValue = nil
+        }
+    }
+    var displayValue: Double?{
+        get{
+            if let result = NSNumberFormatter().numberFromString(display.text!){
+            return result.doubleValue
+            }else{
+                return nil
+            }
+        }
+        set{
+            if newValue != nil{
+            display.text = "\(newValue!)"
+            }else{
+                display.text = "wrong computed value!"
+            }
+            userIsTheMiddleOfTypingANumber = false
+        }
+    }
+    
 }
 
